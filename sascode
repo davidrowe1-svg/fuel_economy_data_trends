@@ -1,0 +1,166 @@
+###############   SAS  CODE  ####################
+%web_drop_table(WORK.IMPORT);
+
+
+FILENAME REFFILE '/home/xxxxxx/sasuser.v94/vehicles.csv';
+
+PROC IMPORT DATAFILE=REFFILE
+	DBMS=CSV
+	OUT=WORK.IMPORT;
+	GETNAMES=YES;
+RUN;
+
+PROC CONTENTS DATA=WORK.IMPORT; RUN;
+
+
+%web_open_table(WORK.IMPORT);
+
+##################################################################
+
+ods graphics / reset width=10.0in height=8.0in imagemap;
+
+proc sgplot data=WORK.IMPORT;
+	reg x=comb08 y=cylinders / nomarkers degree=2 cli alpha=0.10;
+	scatter x=comb08 y=cylinders /;
+	xaxis grid;
+	yaxis grid;
+run;
+
+ods graphics / reset;
+##################################################################
+ods graphics / reset width=10.0in height=8.0in imagemap;
+
+proc sgplot data=WORK.IMPORT;
+	reg x=comb08 y=displ / nomarkers degree=2 cli alpha=0.10;
+	scatter x=comb08 y=displ /;
+	xaxis grid;
+	yaxis grid;
+run;
+
+ods graphics / reset;
+####################################################################
+ods noproctitle;
+ods graphics / imagemap=on;
+
+proc corr data=WORK.IMPORT pearson nosimple noprob plots=scatter(ellipse=none);
+	var cylinders displ;
+	with comb08;
+run;
+
+###############################################################################
+options validvarname=any;
+ods noproctitle;
+ods graphics / imagemap=on;
+
+proc sort data=WORK.IMPORT out=WORK.TempSorted4877;
+	by cylinders;
+run;
+
+proc boxplot data=WORK.TempSorted4877;
+	plot (comb08)*cylinders / boxstyle=schematic;
+run;
+
+proc datasets library=WORK noprint;
+	delete TempSorted4877;
+	run;
+##########################################################################
+options validvarname=any;
+ods noproctitle;
+ods graphics / imagemap=on;
+
+proc sort data=WORK.IMPORT out=WORK.TempSorted4877;
+	by drive;
+run;
+
+proc boxplot data=WORK.TempSorted4877;
+	plot (comb08)*drive / boxstyle=schematic;
+run;
+
+proc datasets library=WORK noprint;
+	delete TempSorted4877;
+	run;
+#########################################################################
+options validvarname=any;
+ods noproctitle;
+ods graphics / imagemap=on;
+
+proc sort data=WORK.IMPORT out=WORK.TempSorted4877;
+	by displ;
+run;
+
+proc boxplot data=WORK.TempSorted4877;
+	plot (comb08)*displ / boxstyle=schematic;
+run;
+
+proc datasets library=WORK noprint;
+	delete TempSorted4877;
+	run;
+##########################################################################
+ods noproctitle;
+ods graphics / imagemap=on;
+
+proc means data=WORK.IMPORT chartype mean std min max n vardef=df;
+	var comb08;
+	class cylinders displ drive;
+run;
+#########################################################################
+
+ods noproctitle;
+ods graphics / imagemap=on;
+
+proc reg data=WORK.IMPORT alpha=0.05 plots(only label)=(diagnostics fitplot 
+		observedbypredicted);
+	model comb08=year/;
+	run;
+quit;
+#############################################################################
+
+ods noproctitle;
+ods graphics / imagemap=on;
+
+proc glmselect data=WORK.IMPORT outdesign(addinputvars)=Work.reg_design 
+		plots=(criterionpanel coefficientpanel);
+	class cylinders displ / param=glm;
+	model comb08=cylinders displ/ showpvalues selection=stepwise
+
+ 
+(select=sbc);
+run;
+
+proc reg data=Work.reg_design alpha=0.05 plots(only)=(diagnostics residuals 
+		observedbypredicted);
+	where cylinders is not missing and displ is not missing;
+	ods select DiagnosticsPanel ResidualPlot ObservedByPredicted;
+	model comb08=&_GLSMOD /;
+	run;
+quit;
+
+proc delete data=Work.reg_design;
+run;
+#######################################################################################
+
+Title;
+ods noproctitle;
+ods graphics / imagemap=on;
+
+proc glm data=WORK.IMPORT;
+	class cylinders;
+	model comb08=cylinders;
+	means cylinders / hovtest=levene welch plots=none;
+	lsmeans cylinders / adjust=tukey pdiff alpha=.05;
+	run;
+quit;
+
+#########################################################################################
+
+Title;
+ods noproctitle;
+ods graphics / imagemap=on;
+
+proc glm data=WORK.IMPORT;
+	class displ;
+	model comb08=displ;
+	means displ / hovtest=levene welch plots=none;
+	lsmeans displ / adjust=tukey pdiff alpha=.05;
+	run;
+quit;
